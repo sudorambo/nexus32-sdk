@@ -1,0 +1,24 @@
+# Build
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+
+# SDK outputs
+*.nxo
+*.nxbin
+*.nxrom
+lib/libnx.a
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

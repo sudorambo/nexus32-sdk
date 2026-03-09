@@ -1,0 +1,6 @@
+name = "game"
+entry = "main"
+sources = "test/main.c"
+screen_width = 320
+screen_height = 240
+cycle_budget = 1000000

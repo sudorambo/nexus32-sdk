@@ -1,0 +1,7 @@
+# E2E smoke test build: minimal C main, produces smoke.nxbin / smoke.nxrom
+name = "smoke"
+entry = "main"
+sources = "test/main.c"
+screen_width = 320
+screen_height = 240
+cycle_budget = 1000000

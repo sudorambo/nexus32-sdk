@@ -83,7 +83,19 @@ int main(int argc, char **argv) {
 	strncat(cmd, " -L lib -lnx", sizeof(cmd) - strlen(cmd) - 1);
 	if (run(cmd) != 0) return 1;
 
-	snprintf(cmd, sizeof(cmd), "rompack -o %s.nxrom %s.nxbin 2>/dev/null || true", name, name);
-	run(cmd);
+	/* Pack .nxbin to .nxrom if rompack is available; optional pack.toml for metadata */
+	{
+		char pack_cmd[2048];
+		FILE *pf = fopen("pack.toml", "r");
+		if (pf) {
+			fclose(pf);
+			snprintf(pack_cmd, sizeof(pack_cmd), "rompack -o %s.nxrom -b %s.nxbin -c pack.toml", name, name);
+		} else {
+			snprintf(pack_cmd, sizeof(pack_cmd), "rompack -o %s.nxrom -b %s.nxbin", name, name);
+		}
+		if (run(pack_cmd) != 0) {
+			fprintf(stderr, "nxbuild: rompack not found or failed (optional); .nxbin built only\n");
+		}
+	}
 	return 0;
 }

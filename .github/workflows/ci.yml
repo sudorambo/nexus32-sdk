@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build .
+
+      - name: Build libnx from assembly
+        run: |
+          for f in lib/src/*.asm; do
+            ./build/nxasm -o "${f%.asm}.nxo" "$f"
+          done
+          rm -f lib/libnx.a
+          (cd lib && ar rcs libnx.a src/*.nxo)
+
+      - name: Test (assembler + linker)
+        run: |
+          ./build/nxasm -o test/minimal.nxo test/minimal.asm
+          ./build/nxld -o test/minimal.nxbin test/minimal.nxo
+          test -f test/minimal.nxbin
+
+      - name: Test (nxbuild smoke)
+        run: |
+          PATH="$(pwd)/build:$PATH" ./build/nxbuild --config smoke-build.toml
+          test -f smoke.nxbin

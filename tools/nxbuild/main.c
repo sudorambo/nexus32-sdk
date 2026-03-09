@@ -21,12 +21,13 @@ static void parse_line(char *line) {
 	char *val = eq + 1;
 	while (*val == ' ') val++;
 	if (*val == '"') { val++; char *end = strchr(val, '"'); if (end) *end = '\0'; }
-	if (strstr(key, "name") && strchr(key, 'e')) { strncpy(name, val, 127); name[127] = '\0'; return; }
-	if (strstr(key, "entry")) { strncpy(entry, val, 63); entry[63] = '\0'; return; }
-	if (strstr(key, "sources")) { strncpy(sources, val, 511); sources[511] = '\0'; return; }
-	if (strstr(key, "screen_width")) { screen_w = atoi(val); return; }
-	if (strstr(key, "screen_height")) { screen_h = atoi(val); return; }
-	if (strstr(key, "cycle_budget")) { cycle_budget = atoi(val); return; }
+	while (key[strlen(key)-1] == ' ') key[strlen(key)-1] = '\0';
+	if (strcmp(key, "name") == 0) { strncpy(name, val, 127); name[127] = '\0'; return; }
+	if (strcmp(key, "entry") == 0) { strncpy(entry, val, 63); entry[63] = '\0'; return; }
+	if (strcmp(key, "sources") == 0) { strncpy(sources, val, 511); sources[511] = '\0'; return; }
+	if (strcmp(key, "screen_width") == 0) { screen_w = atoi(val); return; }
+	if (strcmp(key, "screen_height") == 0) { screen_h = atoi(val); return; }
+	if (strcmp(key, "cycle_budget") == 0) { cycle_budget = atoi(val); return; }
 }
 
 static int run(const char *cmd) {
@@ -76,6 +77,10 @@ int main(int argc, char **argv) {
 
 	char cmd[2048];
 	snprintf(cmd, sizeof(cmd), "nxld -o %s.nxbin", name);
+	if (entry[0]) {
+		strncat(cmd, " -e ", sizeof(cmd) - strlen(cmd) - 1);
+		strncat(cmd, entry, sizeof(cmd) - strlen(cmd) - 1);
+	}
 	for (int i = 0; i < n_nxo; i++) {
 		strncat(cmd, " ", sizeof(cmd) - strlen(cmd) - 1);
 		strncat(cmd, nxo_names[i], sizeof(cmd) - strlen(cmd) - 1);

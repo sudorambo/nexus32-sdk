@@ -221,6 +221,7 @@ static int collect_ar_members(const char *ar_path, ar_member_t *members, int max
 int main(int argc, char **argv)
 {
 	const char *out_path = NULL;
+	const char *entry_sym = NULL;
 	const char *lib_dirs[32];
 	int num_lib_dirs = 0;
 	int link_libnx = 0;
@@ -229,6 +230,7 @@ int main(int argc, char **argv)
 
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-o") == 0 && i + 1 < argc) { out_path = argv[++i]; continue; }
+		if (strcmp(argv[i], "-e") == 0 && i + 1 < argc) { entry_sym = argv[++i]; continue; }
 		if (strcmp(argv[i], "-L") == 0 && i + 1 < argc) {
 			if (num_lib_dirs < 32) lib_dirs[num_lib_dirs++] = argv[++i];
 			else i++;
@@ -259,7 +261,7 @@ int main(int argc, char **argv)
 			num_ar = 0;
 	}
 	if (!out_path || num_inputs == 0) {
-		fprintf(stderr, "usage: nxld -o <out.nxbin> <file.nxo> ... [-L dir] [-lnx]\n");
+		fprintf(stderr, "usage: nxld -o <out.nxbin> <file.nxo> ... [-L dir] [-lnx] [-e entry_symbol]\n");
 		return 1;
 	}
 
@@ -378,13 +380,19 @@ int main(int argc, char **argv)
 		free(data);
 	}
 
+	int undef_errors = 0;
 	for (int i = 0; i < num_reloc_lists; i++) {
 		for (int j = 0; j < reloc_lists[i].n; j++) {
 			reloc_ent_t *re = &reloc_lists[i].r[j];
 			uint32_t addr = 0;
 			for (int k = 0; k < num_global_syms; k++)
 				if (strcmp(global_syms[k].name, re->name) == 0) { addr = global_syms[k].addr; break; }
-			if (re->type == 0 && addr != 0) {
+			if (addr == 0) {
+				fprintf(stderr, "nxld: undefined symbol '%s'\n", re->name);
+				undef_errors++;
+				continue;
+			}
+			if (re->type == 0) {
 				size_t patch_off = reloc_lists[i].base + re->offset;
 				if (patch_off + 4 <= total_text) {
 					uint32_t word = (uint32_t)merged_text[patch_off] | ((uint32_t)merged_text[patch_off+1]<<8) |
@@ -396,6 +404,29 @@ int main(int argc, char **argv)
 					merged_text[patch_off+3] = (unsigned char)(word >> 24);
 				}
 			}
+		}
+	}
+	if (undef_errors) {
+		fprintf(stderr, "nxld: %d undefined symbol(s)\n", undef_errors);
+		free(merged_text);
+		free(merged_data);
+		return 1;
+	}
+
+	if (entry_sym) {
+		int found = 0;
+		for (int k = 0; k < num_global_syms; k++) {
+			if (strcmp(global_syms[k].name, entry_sym) == 0) {
+				entry = global_syms[k].addr;
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			fprintf(stderr, "nxld: entry symbol '%s' not found\n", entry_sym);
+			free(merged_text);
+			free(merged_data);
+			return 1;
 		}
 	}
 

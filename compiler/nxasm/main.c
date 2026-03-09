@@ -195,6 +195,11 @@ static int encode_insn(const char *mnem, char *operands, uint32_t *out, uint32_t
 	if (strcmp(mnem, "or") == 0)   { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x25, rd, rs, rt); *out = w; return 0; }
 	if (strcmp(mnem, "xor") == 0)  { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x26, rd, rs, rt); *out = w; return 0; }
 	if (strcmp(mnem, "nor") == 0)  { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x27, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "mul") == 0)  { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x18, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "mulh") == 0) { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x19, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "div") == 0)  { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x1A, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "divu") == 0) { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x1B, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "mod") == 0)  { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x1C, rd, rs, rt); *out = w; return 0; }
 	if (strcmp(mnem, "slt") == 0)  { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x2A, rd, rs, rt); *out = w; return 0; }
 	if (strcmp(mnem, "sltu") == 0) { int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); w = enc_r(0x2B, rd, rs, rt); *out = w; return 0; }
 	if (strcmp(mnem, "sll") == 0)  {
@@ -206,12 +211,19 @@ static int encode_insn(const char *mnem, char *operands, uint32_t *out, uint32_t
 	}
 	if (strcmp(mnem, "srl") == 0)  { int rt = parse_reg(&p); if (*p == ',') p++; int shamt = (int)strtol(p, &p, 0); w = enc_r(0x02, rd, 0, rt) | ((shamt & 31) << 6); *out = w; return 0; }
 	if (strcmp(mnem, "sra") == 0)  { int rt = parse_reg(&p); if (*p == ',') p++; int shamt = (int)strtol(p, &p, 0); w = enc_r(0x03, rd, 0, rt) | ((shamt & 31) << 6); *out = w; return 0; }
+	if (strcmp(mnem, "sllv") == 0) { int rt = parse_reg(&p); if (*p == ',') p++; int rs = parse_reg(&p); w = enc_r(0x04, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "srlv") == 0) { int rt = parse_reg(&p); if (*p == ',') p++; int rs = parse_reg(&p); w = enc_r(0x06, rd, rs, rt); *out = w; return 0; }
+	if (strcmp(mnem, "srav") == 0) { int rt = parse_reg(&p); if (*p == ',') p++; int rs = parse_reg(&p); w = enc_r(0x07, rd, rs, rt); *out = w; return 0; }
 
 	/* I-type */
 	int32_t imm = 0;
-	if (strcmp(mnem, "addiu") == 0 || strcmp(mnem, "addi") == 0) {
+	if (strcmp(mnem, "addiu") == 0) {
 		int rs = parse_reg(&p); if (*p == ',') p++; parse_imm(&p, &imm);
 		w = enc_i(0x09, rs, rd, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "addi") == 0) {
+		int rs = parse_reg(&p); if (*p == ',') p++; parse_imm(&p, &imm);
+		w = enc_i(0x08, rs, rd, imm); *out = w; return 0;
 	}
 	if (strcmp(mnem, "lui") == 0) {
 		parse_imm(&p, &imm);
@@ -234,6 +246,26 @@ static int encode_insn(const char *mnem, char *operands, uint32_t *out, uint32_t
 		int rs; if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } else { parse_imm(&p, &imm); if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } }
 		w = enc_i(0x2B, rs, rd, imm); *out = w; return 0;
 	}
+	if (strcmp(mnem, "lb") == 0) {
+		int rs; if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } else { parse_imm(&p, &imm); if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } }
+		w = enc_i(0x20, rs, rd, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "lbu") == 0) {
+		int rs; if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } else { parse_imm(&p, &imm); if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } }
+		w = enc_i(0x24, rs, rd, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "lh") == 0) {
+		int rs; if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } else { parse_imm(&p, &imm); if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } }
+		w = enc_i(0x21, rs, rd, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "sb") == 0) {
+		int rs; if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } else { parse_imm(&p, &imm); if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } }
+		w = enc_i(0x28, rs, rd, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "sh") == 0) {
+		int rs; if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } else { parse_imm(&p, &imm); if (*p == '(') { p++; rs = parse_reg(&p); if (*p == ')') p++; } }
+		w = enc_i(0x29, rs, rd, imm); *out = w; return 0;
+	}
 	if (strcmp(mnem, "beq") == 0) {
 		int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); if (*p == ',') p++;
 		char lab[MAX_LABEL_LEN + 1];
@@ -251,6 +283,42 @@ static int encode_insn(const char *mnem, char *operands, uint32_t *out, uint32_t
 		uint32_t target = (idx >= 0) ? symbols[idx].value : pc + 4;
 		imm = (int32_t)(target - (pc + 4)) >> 2;
 		w = enc_i(0x05, rs, rt, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "blt") == 0) {
+		int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); if (*p == ',') p++;
+		char lab[MAX_LABEL_LEN + 1];
+		if (parse_label_ref(&p, lab, sizeof(lab)) < 0) return -1;
+		int idx = find_symbol(lab);
+		uint32_t target = (idx >= 0) ? symbols[idx].value : pc + 4;
+		imm = (int32_t)(target - (pc + 4)) >> 2;
+		w = enc_i(0x14, rs, rt, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "bgt") == 0) {
+		int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); if (*p == ',') p++;
+		char lab[MAX_LABEL_LEN + 1];
+		if (parse_label_ref(&p, lab, sizeof(lab)) < 0) return -1;
+		int idx = find_symbol(lab);
+		uint32_t target = (idx >= 0) ? symbols[idx].value : pc + 4;
+		imm = (int32_t)(target - (pc + 4)) >> 2;
+		w = enc_i(0x15, rs, rt, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "ble") == 0) {
+		int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); if (*p == ',') p++;
+		char lab[MAX_LABEL_LEN + 1];
+		if (parse_label_ref(&p, lab, sizeof(lab)) < 0) return -1;
+		int idx = find_symbol(lab);
+		uint32_t target = (idx >= 0) ? symbols[idx].value : pc + 4;
+		imm = (int32_t)(target - (pc + 4)) >> 2;
+		w = enc_i(0x16, rs, rt, imm); *out = w; return 0;
+	}
+	if (strcmp(mnem, "bge") == 0) {
+		int rs = parse_reg(&p); if (*p == ',') p++; int rt = parse_reg(&p); if (*p == ',') p++;
+		char lab[MAX_LABEL_LEN + 1];
+		if (parse_label_ref(&p, lab, sizeof(lab)) < 0) return -1;
+		int idx = find_symbol(lab);
+		uint32_t target = (idx >= 0) ? symbols[idx].value : pc + 4;
+		imm = (int32_t)(target - (pc + 4)) >> 2;
+		w = enc_i(0x17, rs, rt, imm); *out = w; return 0;
 	}
 
 	if (strcmp(mnem, "jal") == 0) {

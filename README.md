@@ -17,16 +17,16 @@ gcc -std=c17 -Wall -o build/img2tex tools/img2tex/main.c
 gcc -std=c17 -Wall -o build/obj2mesh tools/obj2mesh/main.c
 gcc -std=c17 -Wall -o build/wav2smp tools/wav2smp/main.c
 gcc -std=c17 -Wall -o build/map2lvl tools/map2lvl/main.c
-# Build libnx.a (assemble lib stubs, then archive)
+# Build libnx.a (assemble all .asm sources, then archive)
 for f in lib/src/*.asm; do ./build/nxasm -o "${f%.asm}.nxo" "$f"; done
 ar rcs lib/libnx.a lib/src/*.nxo
 ```
 
-Or use CMake: `mkdir build && cd build && cmake .. && make`.
+Or use CMake: `mkdir build && cd build && cmake .. && make`. CMake assembles all `lib/src/*.asm` files via `nxasm` and archives them into `lib/libnx.a` automatically.
 
 **Tools:** nxasm, nxld, nxcc, nxbuild, shaderc, img2tex, obj2mesh, wav2smp, map2lvl.
 
-**Lib modules (lib/include + lib/src):** sys, gfx, input, audio, math, mem, asset, save, debug; nx_vec.h (vector intrinsics per spec §2.4).
+**Lib modules (lib/include + lib/src):** crt0, sys, gfx, input, audio, math, mem, asset, save, debug; nx_vec.h (vector intrinsics per spec §2.4). All modules are implemented in assembly (`.asm`) and assembled into `libnx.a`.
 
 ## Assembler (nxasm)
 
@@ -36,11 +36,26 @@ AT&T-style assembler; outputs NEXUS-32 object files (`.nxo`).
 nxasm -o foo.nxo foo.asm
 ```
 
-Supports: `.section .text` / `.data` / `.rodata` / `.bss`, `.global name`, labels, and integer mnemonics per spec §2 and [encoding-tables/integer-instructions.csv](../nexus32-spec/encoding-tables/integer-instructions.csv).
+Supports: `.section .text` / `.data` / `.rodata` / `.bss`, `.global name`, labels, and the full integer ISA per spec §2 including:
+
+- R-type: `add`, `addu`, `sub`, `subu`, `and`, `or`, `xor`, `nor`, `sll`, `srl`, `sra`, `sllv`, `srlv`, `srav`, `slt`, `sltu`, `mul`, `mulh`, `div`, `divu`, `mod`, `jr`, `jalr`.
+- I-type: `addi` (0x08, trapping), `addiu` (0x09), `andi`, `ori`, `xori`, `slti`, `sltiu`, `lui`, `lw`, `lh`, `lhu`, `lb`, `lbu`, `sw`, `sh`, `sb`, `beq`, `bne`, `blt`, `bgt`, `ble`, `bge`.
+- J-type: `j`, `jal`.
+- System: `syscall`, `mfc0`, `mtc0`.
+
+See [encoding-tables/integer-instructions.csv](../nexus32-spec/encoding-tables/integer-instructions.csv).
 
 ## Linker (nxld)
 
 Links `.nxo` files and `libnx.a` into a `.nxbin` (or code/data blobs for rompack).
+
+```bash
+nxld -o game.nxbin main.nxo -L lib -lnx
+nxld -e my_entry -o game.nxbin main.nxo lib/libnx.a
+```
+
+- **`-e <symbol>`**: Set entry point symbol (default: `_start`).
+- **Undefined symbol detection**: Reports all unresolved symbols and exits with an error.
 
 ## Compiler (nxcc)
 
@@ -67,7 +82,7 @@ From a project with `build.toml`:
 nxbuild --config build.toml
 ```
 
-Minimal build.toml: `name`, `entry`, `sources` (space-separated .c/.asm), `screen_width`, `screen_height`, `cycle_budget`. Runs nxcc/nxasm, nxld with -lnx, then rompack if available.
+Minimal build.toml: `name`, `entry`, `sources` (space-separated .c/.asm), `screen_width`, `screen_height`, `cycle_budget`. The `entry` field is passed to `nxld -e` to set the entry point symbol. Runs nxcc/nxasm, nxld with -lnx, then rompack if available.
 
 ## Asset tools
 
